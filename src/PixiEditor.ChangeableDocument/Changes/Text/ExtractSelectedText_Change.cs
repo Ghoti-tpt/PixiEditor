@@ -1,10 +1,8 @@
 ﻿using ChunkyImageLib.Operations;
-using Drawie.Backend.Core.Numerics;
 using Drawie.Backend.Core.Text;
 using Drawie.Numerics;
 using PixiEditor.ChangeableDocument.Changeables.Graph.Nodes;
 using PixiEditor.ChangeableDocument.Changeables.Graph.Nodes.Shapes.Data;
-using PixiEditor.ChangeableDocument.ChangeInfos.NodeGraph;
 using PixiEditor.ChangeableDocument.ChangeInfos.Structure;
 using PixiEditor.ChangeableDocument.ChangeInfos.Vectors;
 using PixiEditor.ChangeableDocument.Changes.NodeGraph;
@@ -180,7 +178,12 @@ internal class ExtractSelectedText_Change : Change
     {
         RichText richText = new RichText(text);
 
-        using Font nativeFont = textData.ConstructFont();
+        Font nativeFont = textData.ConstructFont();
+        if (nativeFont == null)
+        {
+            return VecD.Zero;
+        }
+
         var positions = richText.GetGlyphPositions(nativeFont);
         if (positions == null || positions.Length == 0)
         {
@@ -196,7 +199,8 @@ internal class ExtractSelectedText_Change : Change
         return new VecD(position.X, (1 / RichText.PtToPx) * lineOffset.Y);
     }
 
-    private List<(int start, int end, string text)>? GetSubdivisions(int start, int end, string text, bool extractEachCharacter)
+    private List<(int start, int end, string text)>? GetSubdivisions(int start, int end, string text,
+        bool extractEachCharacter)
     {
         if (start == 0 && end == text.Length && !extractEachCharacter)
             return null;
@@ -231,7 +235,7 @@ internal class ExtractSelectedText_Change : Change
         {
             if (extractEachCharacter)
             {
-                for(int i = cursor; i < end; i++)
+                for (int i = cursor; i < end; i++)
                 {
                     result.Add((i, i + 1, text.Substring(i, 1)));
                 }
@@ -240,6 +244,7 @@ internal class ExtractSelectedText_Change : Change
             {
                 result.Add((cursor, end, text.Substring(cursor, end - cursor)));
             }
+
             cursor = end;
 
             if (cursor >= text.Length)

@@ -7,10 +7,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Avalonia.Rendering;
 using Avalonia.Rendering.Composition;
-using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -32,15 +30,11 @@ using Drawie.Numerics;
 using Drawie.Skia;
 using PixiEditor.ChangeableDocument.Changeables.Graph.Nodes.Workspace;
 using PixiEditor.ChangeableDocument.Rendering.ContextData;
-using PixiEditor.Common;
 using PixiEditor.UI.Common.Localization;
 using PixiEditor.ViewModels.Document;
-using PixiEditor.ViewModels.Document.Nodes.Workspace;
 using PixiEditor.Views.Overlays;
 using PixiEditor.Views.Overlays.Pointers;
-using PixiEditor.Views.Visuals;
 using Bitmap = Drawie.Backend.Core.Surfaces.Bitmap;
-using Color = Drawie.Backend.Core.ColorsImpl.Color;
 using Colors = Drawie.Backend.Core.ColorsImpl.Colors;
 using Point = Avalonia.Point;
 using TileMode = Drawie.Backend.Core.Surfaces.TileMode;
@@ -422,7 +416,13 @@ internal class Scene : Zoombox.Zoombox, ICustomHitTest
             Matrix3X3 matrixDiff = isFullscreenRender ? Matrix3X3.Identity : SolveMatrixDiff(matrix, cachedTexture);
             var target = cachedTexture.DrawingSurface;
 
-            if (tex.Size == (VecI)RealDimensions || tex.Size == (VecI)(RealDimensions * SceneRenderer.OversizeFactor))
+            bool renderedInTargetSize = false;
+            if (SceneRenderer != null && SceneRenderer.LastRenderedStates.ContainsKey(ViewportId))
+            {
+                renderedInTargetSize = SceneRenderer.LastRenderedStates[ViewportId].RenderedInTargetSize;
+            }
+
+            if (tex.Size == (VecI)RealDimensions || tex.Size == (VecI)(RealDimensions * SceneRenderer.OversizeFactor) || renderedInTargetSize)
             {
                 saved = texture.Canvas.Save();
                 texture.Canvas.ClipRect(bounds);
@@ -432,6 +432,7 @@ internal class Scene : Zoombox.Zoombox, ICustomHitTest
             else
             {
                 saved = texture.Canvas.Save();
+                // Leaving commented code In case of any rendering and scaling issues. Scaling is invalid in some cases when this is uncommented
                 ChunkResolution renderedResolution = ChunkResolution.Full;
                 if (SceneRenderer != null && SceneRenderer.LastRenderedStates.ContainsKey(ViewportId))
                 {
@@ -503,7 +504,6 @@ internal class Scene : Zoombox.Zoombox, ICustomHitTest
                     BackgroundBitmap,
                     TileMode.Repeat, TileMode.Repeat,
                     Matrix3X3.CreateScale((float)checkerScale.X, (float)checkerScale.Y)),
-                FilterQuality = FilterQuality.None
             };
         }
 
@@ -915,7 +915,7 @@ internal class Scene : Zoombox.Zoombox, ICustomHitTest
         Focus();
     }
 
-    protected override void OnGotFocus(GotFocusEventArgs e)
+    protected override void OnGotFocus(FocusChangedEventArgs e)
     {
         base.OnGotFocus(e);
         try
@@ -935,7 +935,7 @@ internal class Scene : Zoombox.Zoombox, ICustomHitTest
         }
     }
 
-    protected override void OnLostFocus(RoutedEventArgs e)
+    protected override void OnLostFocus(FocusChangedEventArgs e)
     {
         base.OnLostFocus(e);
         try
@@ -1020,7 +1020,7 @@ internal class Scene : Zoombox.Zoombox, ICustomHitTest
     void UpdateFrame()
     {
         updateQueued = false;
-        var root = this.GetVisualRoot();
+        var root = this.GetPresentationSource()?.RootVisual;
         if (root == null || !initialized)
         {
             return;

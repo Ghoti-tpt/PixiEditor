@@ -5,18 +5,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Skia;
 using Avalonia.VisualTree;
-using ChunkyImageLib;
 using ChunkyImageLib.DataHolders;
 using PixiEditor.Helpers;
-using PixiEditor.ViewModels;
-using PixiEditor.Views.Visuals;
-using Drawie.Backend.Core;
-using Drawie.Backend.Core.Numerics;
 using Drawie.Backend.Core.Surfaces;
-using PixiEditor.Helpers.Behaviours;
 using PixiEditor.Helpers.UI;
 using PixiEditor.Models.Controllers.InputDevice;
 using PixiEditor.Models.DocumentModels;
@@ -589,7 +582,7 @@ internal partial class Viewport : UserControl, INotifyPropertyChanged
             EditorDataFunc(),
             CalculateVisibleRegion(),
             ViewportRenderOutput, Scene.CalculateSampling(), Dimensions, CalculateResolution(), GuidValue, Delayed,
-            true, ForceRefreshFinalImage);
+            true, HighResPreview, ForceRefreshFinalImage);
     }
 
     private void Image_MouseDown(object? sender, PointerPressedEventArgs e)

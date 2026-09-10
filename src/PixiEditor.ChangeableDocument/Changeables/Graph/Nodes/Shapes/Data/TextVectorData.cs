@@ -1,5 +1,4 @@
-﻿using Drawie.Backend.Core.ColorsImpl;
-using Drawie.Backend.Core.Numerics;
+﻿using Drawie.Backend.Core.Numerics;
 using Drawie.Backend.Core.Surfaces;
 using Drawie.Backend.Core.Surfaces.PaintImpl;
 using Drawie.Backend.Core.Text;
@@ -58,9 +57,9 @@ public class TextVectorData : ShapeVectorData, IReadOnlyTextData, IScalable
         }
     }
 
-    public Font ConstructFont()
+    public Font? ConstructFont()
     {
-        return Font.ToFont();
+        return GetFont();
     }
 
     double IReadOnlyTextData.Spacing => Spacing ?? Font.Size;
@@ -81,7 +80,12 @@ public class TextVectorData : ShapeVectorData, IReadOnlyTextData, IScalable
         get
         {
             var richText = CreateRichText();
-            using var nativeFont = ConstructFont();
+            var nativeFont = ConstructFont();
+            if (nativeFont == null)
+            {
+                return new RectD(Position, new VecD(0, 0));
+            }
+
             var bounds = richText.MeasureBounds(nativeFont);
             return bounds.Offset(Position);
         }
@@ -107,6 +111,8 @@ public class TextVectorData : ShapeVectorData, IReadOnlyTextData, IScalable
     public VecD PathOffset { get; set; }
 
     private double _spacing;
+    private Font? cachedFont;
+    private int cachedFontHash;
 
     public TextVectorData()
     {
@@ -121,7 +127,12 @@ public class TextVectorData : ShapeVectorData, IReadOnlyTextData, IScalable
     public override VectorPath ToPath(bool transformed = false)
     {
         RichText richText = CreateRichText();
-        using Font nativeFont = ConstructFont();
+        Font? nativeFont = ConstructFont();
+        if (nativeFont == null)
+        {
+            return new VectorPath();
+        }
+
         var path = richText.ToPath(nativeFont);
         path.Offset(Position);
 
@@ -153,7 +164,7 @@ public class TextVectorData : ShapeVectorData, IReadOnlyTextData, IScalable
         }
 
         using Paint paint = new Paint() { IsAntiAliased = AntiAlias };
-        using var nativeFont = Font.ToFont(false);
+        var nativeFont = GetFont();
 
         if (nativeFont == null)
         {
@@ -172,6 +183,18 @@ public class TextVectorData : ShapeVectorData, IReadOnlyTextData, IScalable
         }
     }
 
+    private Font? GetFont()
+    {
+        if (Font.GetCacheHash() != cachedFontHash || cachedFont is { IsDisposed: true })
+        {
+            cachedFont?.Dispose();
+            cachedFontHash = Font.GetCacheHash();
+            cachedFont = Font.ToFont(false);
+        }
+
+        return cachedFont;
+    }
+
     private RichText CreateRichText()
     {
         return new RichText(Text)
@@ -187,7 +210,12 @@ public class TextVectorData : ShapeVectorData, IReadOnlyTextData, IScalable
 
     private void PaintText(Canvas canvas, Paint paint)
     {
-        using Font nativeFont = ConstructFont();
+        Font? nativeFont = GetFont();
+        if (nativeFont == null)
+        {
+            return;
+        }
+
         CreateRichText().Paint(canvas, Position, nativeFont, paint, Path, PathOffset);
     }
 
