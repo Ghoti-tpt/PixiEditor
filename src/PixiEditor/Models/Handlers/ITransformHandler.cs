@@ -17,9 +17,11 @@ internal interface ITransformHandler : IHandler
     public bool HasRedo { get; }
     public bool ShowTransformControls { get; set; }
     public event Action<MouseOnCanvasEventArgs> PassthroughPointerPressed;
+    public event Action<bool> TransformLockedChanged;
     public ShapeCorners Corners { get; set; }
     public bool ShowHandles { get; set; }
     public bool IsSizeBoxEnabled { get; set; }
     public bool CanAlignToPixels { get; set; }
     public bool TransformActive { get; }
+    public bool LockTransform { get; set; }
 }

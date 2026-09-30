@@ -500,7 +500,7 @@ public class BrushEngine : IDisposable
             if (shape.Bounds is { Width: > 0, Height: > 0 })
             {
                 //context.TargetSampledTexture?.Dispose();
-                RectI size = (RectI)brushShapeCache.TightBounds.Round().Inflate(brushNode.TargetOversample.Value);
+                RectI size = (RectI)shape.TightBounds.Round().Inflate(brushNode.TargetOversample.Value);
                 targetSampleUnderRect = UpdateSurfaceUnderRect(TargetStampCacheId, target,
                     size, colorSpace,
                     brushNode.AllowSampleStacking.Value);
@@ -515,7 +515,7 @@ public class BrushEngine : IDisposable
                 }
 
                 context.LatestSampledTexture = latestSampleUnderRect;
-                context.RenderOutputSize = ((RectI)brushShapeCache.TightBounds.Round()).Size;
+                context.RenderOutputSize = ((RectI)shape.TightBounds.Round()).Size;
                 context.GraphCacheId = nextRenderId + 1;
             }
         }
@@ -746,12 +746,12 @@ public class BrushEngine : IDisposable
             colorSpace);
         if (!sampleLatest)
         {
-            target.DrawCommittedRegionOn(new RectI(VecI.Zero, size), ChunkResolution.Full,
+            target.DrawCommittedRegionOn(new RectD(VecI.Zero, size), ChunkResolution.Full,
                 texture.DrawingSurface.Canvas, VecI.Zero);
             return texture;
         }
 
-        target.DrawMostUpToDateRegionOn(new RectI(VecI.Zero, size), ChunkResolution.Full,
+        target.DrawMostUpToDateRegionOn(new RectD(VecI.Zero, size), ChunkResolution.Full,
             texture.DrawingSurface.Canvas, VecI.Zero);
         return texture;
     }
@@ -760,16 +760,17 @@ public class BrushEngine : IDisposable
     private Texture UpdateSurfaceUnderRect(int cacheId, ChunkyImage target, RectI rect, ColorSpace colorSpace,
         bool sampleLatest)
     {
-        var surfaceUnderRect = cache.RequestTexture(cacheId, rect.Size, colorSpace);
+        VecI size = new VecI(rect.Size.X <= 0 ? 1 : rect.Size.X, rect.Size.Y <= 0 ? 1 : rect.Size.Y);
+        var surfaceUnderRect = cache.RequestTexture(cacheId, size, colorSpace);
 
         if (sampleLatest)
         {
-            target.DrawMostUpToDateRegionOn(rect, ChunkResolution.Full, surfaceUnderRect.DrawingSurface.Canvas,
+            target.DrawMostUpToDateRegionOn((RectD)rect, ChunkResolution.Full, surfaceUnderRect.DrawingSurface.Canvas,
                 VecI.Zero);
         }
         else
         {
-            target.DrawCommittedRegionOn(rect, ChunkResolution.Full, surfaceUnderRect.DrawingSurface.Canvas, VecI.Zero);
+            target.DrawCommittedRegionOn((RectD)rect, ChunkResolution.Full, surfaceUnderRect.DrawingSurface.Canvas, VecI.Zero);
         }
 
         return surfaceUnderRect;

@@ -62,6 +62,7 @@ internal partial class DocumentViewModel : PixiObservableObject, IDocument
     private bool busy = false;
 
 
+
     public bool Busy
     {
         get => busy;
@@ -208,7 +209,20 @@ internal partial class DocumentViewModel : PixiObservableObject, IDocument
     public VectorPath SelectionPathBindable => selectionPath;
     public ObservableCollection<PaletteColor> Swatches { get; set; } = new();
     public Guid Id => Internals.Tracker.Document.DocumentId;
-    public ObservableRangeCollection<PaletteColor> Palette { get; set; } = new();
+
+    public ObservableRangeCollection<PaletteColor> Palette
+    {
+        get => palette;
+        set
+        {
+            SetProperty(ref palette, value);
+        }
+    }
+    PaletteColor[] Extensions.CommonApi.Documents.IDocument.Palette
+    {
+        get => Palette.ToArray();
+        set => Palette = new ObservableRangeCollection<PaletteColor>(value);
+    }
     public SnappingViewModel SnappingViewModel { get; set; }
     ISnappingHandler IDocument.SnappingHandler => SnappingViewModel;
     public IReadOnlyCollection<Guid> SelectedMembers => GetSelectedMembers().AsReadOnly();
@@ -220,6 +234,7 @@ internal partial class DocumentViewModel : PixiObservableObject, IDocument
     public TextOverlayViewModel TextOverlayViewModel { get; set; }
     private DocumentInternalParts Internals { get; }
     public AutosaveDocumentViewModel AutosaveViewModel { get; set; }
+    public ContextualOptionsViewModel ContextualOptionsViewModel { get; set; } = new();
     public IReadOnlyCollection<IStructureMemberHandler> SoftSelectedStructureMembers => softSelectedStructureMembers;
     INodeGraphHandler IDocument.NodeGraphHandler => NodeGraph;
     IDocumentOperations IDocument.Operations => Operations;
@@ -229,6 +244,7 @@ internal partial class DocumentViewModel : PixiObservableObject, IDocument
     ILineOverlayHandler IDocument.LineToolOverlayHandler => LineToolOverlayViewModel;
     IReferenceLayerHandler IDocument.ReferenceLayerHandler => ReferenceLayerViewModel;
     IAnimationHandler IDocument.AnimationHandler => AnimationDataViewModel;
+    IContextualOptionsHandler IDocument.ContextualOptionsHandler => ContextualOptionsViewModel;
 
     public bool UsesSrgbBlending { get; private set; }
 
@@ -236,6 +252,8 @@ internal partial class DocumentViewModel : PixiObservableObject, IDocument
     private Guid referenceId = Guid.Empty;
     private Queue<Action> queuedLayerReadyToUseActions = new();
     private Queue<Action> queuedKeyFrameReadyToUseActions = new();
+
+    private ObservableRangeCollection<PaletteColor> palette = new ObservableRangeCollection<PaletteColor>();
 
     private DocumentViewModel()
     {
@@ -416,7 +434,7 @@ internal partial class DocumentViewModel : PixiObservableObject, IDocument
 
         acc.AddActions(new InvokeAction_PassthroughAction(() =>
         {
-            var firstMember = viewModel.NodeGraph.StructureTree.Members.FirstOrDefault();
+            var firstMember = viewModel.NodeGraph.StructureTree.Members.FirstOrDefault(x => !x.IsLockedStructurally);
             if (firstMember != null)
             {
                 viewModel.SetSelectedMember(firstMember);
