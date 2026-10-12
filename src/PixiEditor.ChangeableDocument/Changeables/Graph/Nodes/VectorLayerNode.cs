@@ -16,14 +16,16 @@ using Drawie.Numerics;
 namespace PixiEditor.ChangeableDocument.Changeables.Graph.Nodes;
 
 [NodeInfo("VectorLayer")]
-public class VectorLayerNode : LayerNode, ITransformableObject, IReadOnlyVectorNode, IRasterizable, IScalable, IQuickColorChangeable
+public class VectorLayerNode : LayerNode, ITransformableObject, IReadOnlyVectorNode, IRasterizable, IScalable, IQuickColorChangeable, ICelLayer
 {
+    public const string VectorLayerKey = "LayerVector";
     public InputProperty<ShapeVectorData> InputVector { get; }
     public OutputProperty<ShapeVectorData> Shape { get; }
     public OutputProperty<Matrix3X3> Matrix { get; }
 
-    public const string VectorLayerKey = "LayerVector";
-
+    public string CelDataKey => VectorLayerKey;
+    public object? CreateEmptyCelData(VecI documentSize) => null;
+    public object? CloneCelDataAtFrame(int frame) => GetShapeAtFrame(frame)?.Clone();
     public bool FallbackAnimationToLayerImage { get; set; } = false;
     public Matrix3X3 TransformationMatrix
     {
@@ -41,7 +43,7 @@ public class VectorLayerNode : LayerNode, ITransformableObject, IReadOnlyVectorN
 
     public ShapeVectorData? EmbeddedShapeData
     {
-        get => (ShapeVectorData) keyFrames[0].Data;
+        get => (ShapeVectorData)keyFrames[0].Data;
         set => keyFrames[0].Data = value;
     }
 
@@ -56,6 +58,8 @@ public class VectorLayerNode : LayerNode, ITransformableObject, IReadOnlyVectorN
     }
 
     IReadOnlyShapeVectorData IReadOnlyVectorNode.ShapeData => RenderableShapeData;
+
+    IReadOnlyShapeVectorData? IReadOnlyVectorNode.GetShapeData(KeyFrameTime frame) => GetRenderableShapeData(frame);
 
 
     public override VecD GetScenePosition(KeyFrameTime time) =>
@@ -239,6 +243,20 @@ public class VectorLayerNode : LayerNode, ITransformableObject, IReadOnlyVectorN
         return GetFrameWithShape(frame)?.Data as ShapeVectorData;
     }
 
+    public bool CanEditShapeAtFrame(int frame)
+    {
+        return GetFrameWithShape(frame) != null;
+    }
+
+    public void SetShapeAtFrame(int frame, ShapeVectorData? shape)
+    {
+        var shapeFrame = GetFrameWithShape(frame);
+        if (shapeFrame != null)
+        {
+            shapeFrame.Data = shape;
+        }
+    }
+
     protected override int GetContentCacheHash()
     {
         return HashCode.Combine(
@@ -317,7 +335,7 @@ public class VectorLayerNode : LayerNode, ITransformableObject, IReadOnlyVectorN
     {
         if (colors == null) return null;
 
-        if(EmbeddedShapeData is null)
+        if (EmbeddedShapeData is null)
         {
             return null;
         }

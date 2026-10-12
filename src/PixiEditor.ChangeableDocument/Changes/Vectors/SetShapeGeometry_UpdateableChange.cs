@@ -9,6 +9,7 @@ namespace PixiEditor.ChangeableDocument.Changes.Vectors;
 internal class SetShapeGeometry_UpdateableChange : InterruptableUpdateableChange
 {
     public Guid TargetId { get; set; }
+    public int Frame { get; set; }
     public ShapeVectorData Data { get; set; }
     public VectorShapeChangeType ChangeType { get; set; }
 
@@ -17,23 +18,25 @@ internal class SetShapeGeometry_UpdateableChange : InterruptableUpdateableChange
     private AffectedArea lastAffectedArea;
 
     [GenerateUpdateableChangeActions]
-    public SetShapeGeometry_UpdateableChange(Guid targetId, ShapeVectorData data, VectorShapeChangeType changeType)
+    public SetShapeGeometry_UpdateableChange(Guid targetId, ShapeVectorData data, VectorShapeChangeType changeType, int frame)
     {
         TargetId = targetId;
         Data = data;
         ChangeType = changeType;
+        Frame = frame;
     }
 
     public override bool InitializeAndValidate(Document target)
     {
-        if (target.TryFindNode<VectorLayerNode>(TargetId, out var node))
+        if (target.TryFindNode<VectorLayerNode>(TargetId, out var node) && node.CanEditShapeAtFrame(Frame))
         {
-            if (IsIdentical(node.EmbeddedShapeData, Data))
+            var currentShape = node.GetShapeAtFrame(Frame);
+            if (IsIdentical(currentShape, Data))
             {
                 return false;
             }
 
-            originalData = (ShapeVectorData?)node.EmbeddedShapeData?.Clone();
+            originalData = (ShapeVectorData?)currentShape?.Clone();
             return true;
         }
 
@@ -50,9 +53,9 @@ internal class SetShapeGeometry_UpdateableChange : InterruptableUpdateableChange
     {
         var node = target.FindNode<VectorLayerNode>(TargetId);
 
-        node.EmbeddedShapeData = Data;
+        node.SetShapeAtFrame(Frame, Data);
 
-        RectD aabb = node.EmbeddedShapeData.TransformedAABB.RoundOutwards();
+        RectD aabb = Data.TransformedAABB.RoundOutwards();
         aabb = aabb with { Size = new VecD(Math.Max(1, aabb.Size.X), Math.Max(1, aabb.Size.Y)) };
 
         var affected = new AffectedArea(OperationHelper.FindChunksTouchingRectangle(
@@ -80,9 +83,9 @@ internal class SetShapeGeometry_UpdateableChange : InterruptableUpdateableChange
             return new None();
         }
 
-        node.EmbeddedShapeData = Data;
+        node.SetShapeAtFrame(Frame, Data);
 
-        RectD aabb = node.EmbeddedShapeData.TransformedAABB.RoundOutwards();
+        RectD aabb = Data.TransformedAABB.RoundOutwards();
         aabb = aabb with { Size = new VecD(Math.Max(1, aabb.Size.X), Math.Max(1, aabb.Size.Y)) };
 
         var affected = new AffectedArea(OperationHelper.FindChunksTouchingRectangle(
@@ -94,13 +97,13 @@ internal class SetShapeGeometry_UpdateableChange : InterruptableUpdateableChange
     public override OneOf<None, IChangeInfo, List<IChangeInfo>> Revert(Document target)
     {
         var node = target.FindNode<VectorLayerNode>(TargetId);
-        node.EmbeddedShapeData = originalData;
+        node.SetShapeAtFrame(Frame, originalData);
 
         AffectedArea affected = new AffectedArea();
 
-        if (node.EmbeddedShapeData != null)
+        if (originalData != null)
         {
-            RectD aabb = node.EmbeddedShapeData.TransformedAABB.RoundOutwards();
+            RectD aabb = originalData.TransformedAABB.RoundOutwards();
             aabb = aabb with { Size = new VecD(Math.Max(1, aabb.Size.X), Math.Max(1, aabb.Size.Y)) };
 
             affected = new AffectedArea(OperationHelper.FindChunksTouchingRectangle(
@@ -134,7 +137,8 @@ internal class SetShapeGeometry_UpdateableChange : InterruptableUpdateableChange
     {
         if (other is SetShapeGeometry_UpdateableChange change)
         {
-            return change.TargetId == TargetId &&
+            return change.Frame == Frame &&
+                   change.TargetId == TargetId &&
                    !ChangeType.HasFlag(VectorShapeChangeType.GeometryData) && ChangeType.HasFlag(change.ChangeType) &&
                    change.Data is not TextVectorData; // text should not be merged into one change
         }

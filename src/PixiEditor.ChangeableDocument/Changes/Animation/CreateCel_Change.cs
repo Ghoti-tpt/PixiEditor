@@ -1,4 +1,5 @@
 ﻿using PixiEditor.ChangeableDocument.Changeables.Animations;
+using PixiEditor.ChangeableDocument.Changeables.Graph.Interfaces;
 using PixiEditor.ChangeableDocument.Changeables.Graph.Nodes;
 using PixiEditor.ChangeableDocument.ChangeInfos.Animation;
 
@@ -10,7 +11,7 @@ internal class CreateCel_Change : Change
     private int _frame;
     private readonly Guid? cloneFrom;
     private int? cloneFromFrame;
-    private ImageLayerNode? _layer;
+    private LayerNode? _layer;
     private Guid createdKeyFrameId;
     private bool shiftKeyframesAfter;
 
@@ -51,7 +52,13 @@ internal class CreateCel_Change : Change
             }
         }
 
-        if (_frame == 0 || !target.TryFindMember(_targetLayerGuid, out _layer))
+        if (_frame == 0 || !target.TryFindMember(_targetLayerGuid, out _layer) || _layer is not ICelLayer)
+        {
+            return false;
+        }
+
+        if (cloneFrom.HasValue && 
+            (!target.TryFindMember(cloneFrom.Value, out LayerNode? source) || source.GetType() != _layer.GetType()))
         {
             return false;
         }
@@ -65,14 +72,17 @@ internal class CreateCel_Change : Change
     public override OneOf<None, IChangeInfo, List<IChangeInfo>> Apply(Document target, bool firstApply,
         out bool ignoreInUndo)
     {
-        var cloneFromImage = cloneFrom.HasValue
-            ? target.FindMemberOrThrow<ImageLayerNode>(cloneFrom.Value).GetLayerImageAtFrame(cloneFromFrame ?? 0)
+        object? celData = cloneFrom.HasValue
+            ? ((ICelLayer)target.FindMemberOrThrow<LayerNode>(cloneFrom.Value)).CloneCelDataAtFrame(cloneFromFrame ?? 0)
             : null;
 
-        ImageLayerNode targetNode = target.FindMemberOrThrow<ImageLayerNode>(_targetLayerGuid);
+        LayerNode targetNode = target.FindMemberOrThrow<LayerNode>(_targetLayerGuid);
+        ICelLayer celLayer = (ICelLayer)targetNode;
 
-        ChunkyImage img = cloneFromImage?.CloneFromCommitted() ??
-                          new ChunkyImage(target.Size);
+        if (celData == null)
+        {
+            celData = celLayer.CreateEmptyCelData(target.Size);
+        }
 
         var keyFrame =
             new CelKeyFrame(createdKeyFrameId, targetNode.Id, _frame, target);
@@ -91,7 +101,7 @@ internal class CreateCel_Change : Change
             }
 
             targetNode.AddFrame(createdKeyFrameId,
-                new KeyFrameData(createdKeyFrameId, _frame, 1, ImageLayerNode.ImageLayerKey) { Data = img, });
+                new KeyFrameData(createdKeyFrameId, _frame, 1, celLayer.CelDataKey) { Data = celData, });
         }
         else
         {
@@ -145,7 +155,7 @@ internal class CreateCel_Change : Change
     {
         var rootCelGroup = target.AnimationData.KeyFrames.FirstOrDefault(x => x.Id == _layer!.Id) as GroupKeyFrame;
         target.AnimationData.RemoveKeyFrame(createdKeyFrameId);
-        target.FindMemberOrThrow<ImageLayerNode>(_targetLayerGuid).RemoveKeyFrame(createdKeyFrameId);
+        target.FindMemberOrThrow<LayerNode>(_targetLayerGuid).RemoveKeyFrame(createdKeyFrameId);
 
         List<IChangeInfo> infos = new();
         var root = target.AnimationData.KeyFrames.FirstOrDefault(x => x.Id == _layer.Id) as GroupKeyFrame;

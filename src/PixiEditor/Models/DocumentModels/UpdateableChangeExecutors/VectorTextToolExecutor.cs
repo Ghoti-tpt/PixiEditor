@@ -166,7 +166,7 @@ internal class VectorTextToolExecutor : UpdateableChangeExecutor, ITextOverlayEv
             var textData = ConstructTextData(lastText);
             toolbar.FontSize = distance * RichText.PtToPx;
             internals.ActionAccumulator.AddActions(new SetShapeGeometry_Action(selectedMember.Id, textData,
-                VectorShapeChangeType.GeometryData));
+                VectorShapeChangeType.GeometryData, document!.AnimationHandler.ActiveFrameBindable));
         }
     }
 
@@ -201,7 +201,7 @@ internal class VectorTextToolExecutor : UpdateableChangeExecutor, ITextOverlayEv
     {
         var constructedText = ConstructTextData(text);
         internals.ActionAccumulator.AddFinishedActions(
-            new SetShapeGeometry_Action(selectedMember.Id, constructedText, VectorShapeChangeType.GeometryData),
+            new SetShapeGeometry_Action(selectedMember.Id, constructedText, VectorShapeChangeType.GeometryData, document!.AnimationHandler.ActiveFrameBindable),
             new EndSetShapeGeometry_Action(),
             new SetLowDpiRendering_Action(selectedMember.Id, toolbar.ForceLowDpiRendering));
         lastText = text;
@@ -251,7 +251,7 @@ internal class VectorTextToolExecutor : UpdateableChangeExecutor, ITextOverlayEv
         constructedText.Font = constructedText.Font with { Edging = previousEdging, SubPixel = previousSubpixel };
 
         internals.ActionAccumulator.AddActions(
-            new SetShapeGeometry_Action(selectedMember.Id, constructedText, changeType),
+            new SetShapeGeometry_Action(selectedMember.Id, constructedText, changeType, document!.AnimationHandler.ActiveFrameBindable),
             new SetLowDpiRendering_Action(selectedMember.Id, toolbar.ForceLowDpiRendering));
 
         document.TextOverlayHandler.Font = default; // Forces refreshing glyphs
@@ -292,10 +292,10 @@ internal class VectorTextToolExecutor : UpdateableChangeExecutor, ITextOverlayEv
 
         var constructedText = ConstructTextData(lastText);
         internals.ActionAccumulator.AddFinishedActions(
-            new SetShapeGeometry_Action(selectedMember.Id, constructedText, VectorShapeChangeType.GeometryData),
+            new SetShapeGeometry_Action(selectedMember.Id, constructedText, VectorShapeChangeType.GeometryData, document!.AnimationHandler.ActiveFrameBindable),
             new EndSetShapeGeometry_Action(),
             new SetLowDpiRendering_Action(selectedMember.Id, toolbar.ForceLowDpiRendering),
-            new SetShapeGeometry_Action(firstValidLayer.Id, newShape, VectorShapeChangeType.GeometryData),
+            new SetShapeGeometry_Action(firstValidLayer.Id, newShape, VectorShapeChangeType.GeometryData, document!.AnimationHandler.ActiveFrameBindable),
             new EndSetShapeGeometry_Action());
     }
 

@@ -11,12 +11,15 @@ using Drawie.Numerics;
 namespace PixiEditor.ChangeableDocument.Changeables.Graph.Nodes;
 
 [NodeInfo("ImageLayer")]
-public class ImageLayerNode : LayerNode, IReadOnlyImageNode
+public class ImageLayerNode : LayerNode, IReadOnlyImageNode, ICelLayer
 {
     public const string ImageFramesKey = "Frames";
     public const string ImageLayerKey = "LayerImage";
-
     public const int AccuratePreviewMaxSize = 2048;
+
+    public string CelDataKey => ImageLayerKey;
+    public object? CreateEmptyCelData(VecI documentSize) => new ChunkyImage(documentSize);
+    public object? CloneCelDataAtFrame(int frame) => GetLayerImageAtFrame(frame)?.CloneFromCommitted();
 
     public override VecD GetScenePosition(KeyFrameTime time) => layerImage?.CommittedSize / 2f ?? VecD.Zero;
     public override VecD GetSceneSize(KeyFrameTime time) => layerImage?.CommittedSize ?? VecD.Zero;
