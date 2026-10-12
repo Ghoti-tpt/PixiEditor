@@ -712,12 +712,12 @@ internal partial class DocumentViewModel
                 {
                     foreach (var child in container.Children)
                     {
-                        if (child is IReadOnlyRasterKeyFrame rasterKeyFrame)
+                        if (child is IReadOnlyCelKeyFrame rasterKeyFrame)
                         {
                             if (!nodeIdMap.ContainsKey(rasterKeyFrame.NodeId)) continue;
                             if (!keyFrameIds.ContainsKey(rasterKeyFrame.Id)) continue;
 
-                            BuildRasterKeyFrame(rasterKeyFrame, graph, group, nodeIdMap, keyFrameIds);
+                            BuildCelKeyFrame(rasterKeyFrame, graph, group, nodeIdMap, keyFrameIds);
                         }
                     }
                 }
@@ -727,25 +727,10 @@ internal partial class DocumentViewModel
         }
     }
 
-    private static void BuildRasterKeyFrame(IReadOnlyRasterKeyFrame rasterKeyFrame, IReadOnlyNodeGraph graph,
+    private static void BuildCelKeyFrame(IReadOnlyCelKeyFrame rasterKeyFrame, IReadOnlyNodeGraph graph,
         KeyFrameGroup group,
         Dictionary<Guid, int> idMap, Dictionary<Guid, int> keyFrameIds)
     {
-        IReadOnlyChunkyImage image = rasterKeyFrame.GetTargetImage(graph.AllNodes);
-        var bounds = image?.FindChunkAlignedMostUpToDateBounds();
-
-        DrawingSurface surface = null;
-
-        if (bounds is { Width: > 0, Height: > 0 })
-        {
-            surface = DrawingBackendApi.Current.SurfaceImplementation.Create(
-                new ImageInfo(bounds.Value.Width, bounds.Value.Height));
-
-            image.DrawMostUpToDateRegionOn(
-                new RectD(0, 0, bounds.Value.Width, bounds.Value.Height), ChunkResolution.Full, surface.Canvas,
-                new VecI(0, 0));
-        }
-
         group.Children.Add(new ElementKeyFrame()
         {
             NodeId = idMap[rasterKeyFrame.NodeId], KeyFrameId = keyFrameIds[rasterKeyFrame.Id],

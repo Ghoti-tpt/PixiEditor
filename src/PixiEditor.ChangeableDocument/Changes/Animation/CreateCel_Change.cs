@@ -75,7 +75,7 @@ internal class CreateCel_Change : Change
                           new ChunkyImage(target.Size);
 
         var keyFrame =
-            new RasterKeyFrame(createdKeyFrameId, targetNode.Id, _frame, target);
+            new CelKeyFrame(createdKeyFrameId, targetNode.Id, _frame, target);
 
         var existingData = targetNode.KeyFrames.FirstOrDefault(x => x.KeyFrameGuid == createdKeyFrameId);
 
@@ -112,7 +112,7 @@ internal class CreateCel_Change : Change
             bool isCelAtFrame = target.AnimationData.TryGetKeyFrameAtFrame(targetNode.Id, _frame) != null;
             if (isCelAtFrame && shiftKeyframesAfter)
             {
-                var celsAfter = rootCelGroup.Children.OfType<RasterKeyFrame>().Where(x => x.EndFrame >= _frame).ToList();
+                var celsAfter = rootCelGroup.Children.OfType<CelKeyFrame>().Where(x => x.EndFrame >= _frame).ToList();
 
                 foreach (var rasterKeyFrame in celsAfter)
                 {
@@ -134,7 +134,7 @@ internal class CreateCel_Change : Change
         target.AnimationData.AddKeyFrame(keyFrame);
         ignoreInUndo = false;
 
-        infos.Add(new CreateRasterKeyFrame_ChangeInfo(_targetLayerGuid, _frame, createdKeyFrameId, cloneFrom.HasValue));
+        infos.Add(new CreateCelKeyFrame_ChangeInfo(_targetLayerGuid, _frame, createdKeyFrameId, cloneFrom.HasValue));
         infos.Add(new KeyFrameLength_ChangeInfo(createdKeyFrameId, _frame, duration));
         infos.Add(new KeyFrameVisibility_ChangeInfo(_targetLayerGuid, isVisible));
 
@@ -152,7 +152,7 @@ internal class CreateCel_Change : Change
 
         foreach (var kvp in originalStartFrames)
         {
-            if (root?.Children.FirstOrDefault(x => x.Id == kvp.Key) is RasterKeyFrame rasterKeyFrame)
+            if (root?.Children.FirstOrDefault(x => x.Id == kvp.Key) is CelKeyFrame rasterKeyFrame)
             {
                 rasterKeyFrame.StartFrame = kvp.Value;
                 infos.Add(new KeyFrameLength_ChangeInfo(rasterKeyFrame.Id, rasterKeyFrame.StartFrame,

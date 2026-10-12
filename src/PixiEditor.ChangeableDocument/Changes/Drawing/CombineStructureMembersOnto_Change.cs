@@ -334,10 +334,10 @@ internal class CombineStructureMembersOnto_Change : Change
 
         targetLayer.AddFrame(keyFrameData.KeyFrameGuid, clonedData);
 
-        changes.Add(new CreateRasterKeyFrame_ChangeInfo(targetLayerGuid, frame, clonedData.KeyFrameGuid, true));
+        changes.Add(new CreateCelKeyFrame_ChangeInfo(targetLayerGuid, frame, clonedData.KeyFrameGuid, true));
         changes.Add(new KeyFrameLength_ChangeInfo(targetLayerGuid, clonedData.StartFrame, clonedData.Duration));
 
-        target.AnimationData.AddKeyFrame(new RasterKeyFrame(clonedData.KeyFrameGuid, targetLayerGuid, frame, target));
+        target.AnimationData.AddKeyFrame(new CelKeyFrame(clonedData.KeyFrameGuid, targetLayerGuid, frame, target));
     }
 
     private int GetMaxFrame(Document target, StructureNode targetLayer)
